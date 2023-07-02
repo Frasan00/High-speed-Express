@@ -12,6 +12,10 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unordered_map>
+#include <functional>
+#include "Request.cpp"
+#include "Response.cpp"
 
 /*
 * Main process for a server socket: creation, binding to (ip, port), listen, connection
@@ -19,6 +23,7 @@
 
 std::vector<std::string> httpMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" };
 std::vector<std::string> httpVersions = { "HTTP/1.0", "HTTP/1.1", "HTTP/2.0" };
+typedef std::function<void(Request* req, Response* res)> FunctionType;
 
 class Server{
     public:
@@ -87,19 +92,75 @@ class Server{
                 std::cout << "Client disconnected, socket: " << clientSocket << "\n";
             }
         }
+
+        void addHandler(std::string path, FunctionType handler){
+            if (handlers.count(path) > 0) {
+                return;
+            }
+            handlers[path] = handler;
+        }
     
     private:
         int serverSocket, clientSocket, port, max_connections;
         struct sockaddr_in serverAddress, clientAddress;
         socklen_t clientAddressLength;
+        std::unordered_map<std::string, FunctionType> handlers;
 
         void handleData(int serverSocket, int clientSocket, char* buffer){
-            const std::string data = buffer;
-            if(this->isValidPackage(buffer, clientSocket) == false){
+            std::vector<std::string> lines = this->splitString(buffer, '\n');
+            std::string firstLine = lines[0];
+            std::vector<std::string> splittedFirstLine = this->splitString(firstLine.c_str(), ' ');
+
+            // First packet check
+            if (strlen(buffer) == 0 || lines.size() < 1 || splittedFirstLine.size() < 2) { 
                 std::cout << "Received invalid HTTP packet" << "\n";
                 return;
             }
-            std::cout << data << "\n";
+
+            std::string method = splittedFirstLine[0];
+            std::string path = splittedFirstLine[1];
+            std::string version = splittedFirstLine[2];
+            version.pop_back();
+
+            // second packet check
+            if (std::find(httpMethods.begin(), httpMethods.end(), method) == httpMethods.end() || std::find(httpVersions.begin(), httpVersions.end(), version) == httpVersions.end()) { 
+                std::cout << "Received invalid HTTP packet" << "\n";
+                return;
+            }
+
+            // valid package
+            std::cout << method + " " + path + " " + version << "\n"; // to del
+
+            std::unordered_map<std::string, std::string> params;
+            std::vector<std::string> splittedPath = splitString(path.c_str(), '?');
+            if(splittedPath.size() == 2){
+                path = splittedPath[0];
+                params = parseQueryString(splittedPath[1]);
+            }
+
+            std::unordered_map<std::string, std::string> headers = this->getHeaders(lines);
+
+            // to del
+            this->printMap(headers);
+            this->printMap(params);
+
+        }
+
+        std::unordered_map<std::string, std::string> getHeaders(std::vector<std::string> lines){
+            std::unordered_map<std::string, std::string> headers;
+            for (int i = 1; i<lines.size(); i++){
+                if(lines[i].size() < 2) break;
+                if(lines[i].find(":") == std::string::npos || splitString(lines[i].c_str(), ':').size() < 2){
+                    std::cout << "Received invalid header: "+lines[i] << "\n";
+                    return {};
+                }
+                int separatorIndex = lines[i].find(":");
+                std::string key = lines[i].substr(0, separatorIndex);
+                std::string value = lines[i].substr(separatorIndex + 1);
+                value.pop_back(); // deletes the final "\r"
+                headers[key] = trimStart(value);
+            }
+            return headers;
         }
 
         std::vector<std::string> splitString(const char* str, char delimiter){
@@ -119,24 +180,53 @@ class Server{
             return tokens;
         }
 
-        bool isValidPackage(char* buffer, int clientSocket) {
-            if (strlen(buffer) == 0) { return false; }
+        std::unordered_map<std::string, std::string> parseQueryString(const std::string& queryString) {
+            std::unordered_map<std::string, std::string> params;
 
-            std::vector<std::string> lines = this->splitString(buffer, '\n');
-            if (lines.size() < 1) { return false; }
+            size_t startPos = 0;
+            size_t endPos = queryString.find('&');
 
-            std::string firstLine = lines[0];
-            std::vector<std::string> splittedFirstLine = this->splitString(firstLine.c_str(), ' ');
-            if (splittedFirstLine.size() < 2) { return false; }
+            while (endPos != std::string::npos) {
+                std::string param = queryString.substr(startPos, endPos - startPos);
 
-            std::string method = splittedFirstLine[0];
-            std::string version = splittedFirstLine[2];
-            version.pop_back();
+                size_t delimiterPos = param.find('=');
+                if (delimiterPos != std::string::npos) {
+                    std::string key = param.substr(0, delimiterPos);
+                    std::string value = param.substr(delimiterPos + 1);
+                    params[key] = value;
+                }
 
-            if (std::find(httpMethods.begin(), httpMethods.end(), method) == httpMethods.end() ||
-                std::find(httpVersions.begin(), httpVersions.end(), version) == httpVersions.end()) { return false; }
-            
-            return true;
+                startPos = endPos + 1;
+                endPos = queryString.find('&', startPos);
+            }
+
+            std::string lastParam = queryString.substr(startPos);
+            size_t delimiterPos = lastParam.find('=');
+            if (delimiterPos != std::string::npos) {
+                std::string key = lastParam.substr(0, delimiterPos);
+                std::string value = lastParam.substr(delimiterPos + 1);
+                params[key] = value;
+            }
+
+            return params;
+        }
+
+        std::string trimStart(const std::string& str) {
+            std::string trimmed = str;
+            size_t startPos = 0;
+            while (startPos < trimmed.length() && std::isspace(trimmed[startPos])) {
+                ++startPos;
+            }
+            return trimmed.substr(startPos);
+        }
+
+        // testing purpose
+        int printMap(std::unordered_map<std::string, std::string> map) {
+            for (const auto& pair : map) {
+                std::cout << pair.first << ": " << pair.second << std::endl;
+            }
+
+            return 0;
         }
 
 };
