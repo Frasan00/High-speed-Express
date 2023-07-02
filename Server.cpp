@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +16,9 @@
 /*
 * Main process for a server socket: creation, binding to (ip, port), listen, connection
 */
+
+std::vector<std::string> httpMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" };
+std::vector<std::string> httpVersions = { "HTTP/1.0", "HTTP/1.1", "HTTP/2.0" };
 
 class Server{
     public:
@@ -89,8 +94,51 @@ class Server{
         socklen_t clientAddressLength;
 
         void handleData(int serverSocket, int clientSocket, char* buffer){
-            std::cout << buffer << "\n"; // to delete
+            const std::string data = buffer;
+            if(this->isValidPackage(buffer, clientSocket) == false){
+                std::cout << "Received invalid HTTP packet" << "\n";
+                return;
+            }
+            std::cout << data << "\n";
         }
+
+        std::vector<std::string> splitString(const char* str, char delimiter){
+            std::vector<std::string> tokens;
+
+            char* copy = new char[strlen(str) + 1];
+            strcpy(copy, str);
+            
+            char* token = strtok(copy, &delimiter);
+            
+            while (token != nullptr){
+                tokens.push_back(token);
+                token = strtok(nullptr, &delimiter);
+            }
+            delete[] copy;
+            
+            return tokens;
+        }
+
+        bool isValidPackage(char* buffer, int clientSocket) {
+            if (strlen(buffer) == 0) { return false; }
+
+            std::vector<std::string> lines = this->splitString(buffer, '\n');
+            if (lines.size() < 1) { return false; }
+
+            std::string firstLine = lines[0];
+            std::vector<std::string> splittedFirstLine = this->splitString(firstLine.c_str(), ' ');
+            if (splittedFirstLine.size() < 2) { return false; }
+
+            std::string method = splittedFirstLine[0];
+            std::string version = splittedFirstLine[2];
+            version.pop_back();
+
+            if (std::find(httpMethods.begin(), httpMethods.end(), method) == httpMethods.end() ||
+                std::find(httpVersions.begin(), httpVersions.end(), version) == httpVersions.end()) { return false; }
+            
+            return true;
+        }
+
 };
 
 #endif
