@@ -36,25 +36,28 @@ class Server{
             // server socket creation
             serverSocket = socket(AF_INET, SOCK_STREAM, 0);
             if(serverSocket == -1) {
-                std::cerr << "Failed to create server socket." << "\n";
+                std::cerr << "Failed to create server socket." << std::endl;
                 return;
             }
-            std::cout << "Socket created succesfully" << "\n";
+            std::cout << "Socket created succesfully" << std::endl;
+            int opt=1;
+            socklen_t optlen=sizeof(opt);
 
             // binding the socket to (addr, port)
             serverAddress.sin_family = AF_INET;
             serverAddress.sin_addr.s_addr = INADDR_ANY;
             serverAddress.sin_port  = htons(port);
+            setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, optlen);
             int bindSocket = bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
             if(bindSocket == -1){
-                std::cerr << "Failed to bind the socket" << "\n";
+                std::cerr << "Failed to bind the socket" << std::endl;
                 close(serverSocket);
                 return;
             }
 
             int listenSocket = listen(serverSocket, max_connections);
             if(listenSocket == -1){
-                std::cerr << "Failed to listen for incoming connections" << "\n";
+                std::cerr << "Failed to listen for incoming connections" << std::endl;
                 close(serverSocket);
                 return;
             }
@@ -65,13 +68,13 @@ class Server{
                 clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddress, &clientAddressLength);
 
                 if (clientSocket == -1) {
-                    std::cerr << "Failed to accept connection." << "\n";
+                    std::cerr << "Failed to accept connection." << std::endl;
                     close(serverSocket);
                     return;
                 }
 
                 // client connected
-                std::cout << "Client connected, socket: "+clientSocket << "\n";
+                std::cout << "Client connected, socket: "+clientSocket << std::endl;
 
                 // handle incoming message
                 const int bufferSize = 1024;
@@ -79,17 +82,17 @@ class Server{
                 memset(buffer, 0, bufferSize);
 
                 ssize_t bytesRead = recv(clientSocket, buffer, bufferSize - 1, 0);
-                if (bytesRead == -1) {std::cerr << "Failed to read data from client." << "\n"; } 
-                else if (bytesRead == 0) { std::cout << "Client disconnected. Socket: " << clientSocket << "\n"; } 
+                if (bytesRead == -1) {std::cerr << "Failed to read data from client." << std::endl; } 
+                else if (bytesRead == 0) { std::cout << "Client disconnected. Socket: " << clientSocket << std::endl; } 
                 else {
                     // Data received successfully
-                    std::cout << "Data received from socket: "+clientSocket << "\n";
+                    std::cout << "Data received from socket: "+clientSocket << std::endl;
                     this->handleData(serverSocket, clientSocket, buffer);
                 }
                 
                 // Close the client socket
                 close(clientSocket);
-                std::cout << "Client disconnected, socket: " << clientSocket << "\n";
+                std::cout << "Client disconnected, socket: " << clientSocket << std::endl;
             }
         }
 
@@ -113,7 +116,7 @@ class Server{
 
             // First packet check
             if (strlen(buffer) == 0 || lines.size() < 1 || splittedFirstLine.size() < 2) { 
-                std::cout << "Received invalid HTTP packet" << "\n";
+                std::cout << "Received invalid HTTP packet" << std::endl;
                 return;
             }
 
@@ -124,12 +127,12 @@ class Server{
 
             // second packet check
             if (std::find(httpMethods.begin(), httpMethods.end(), method) == httpMethods.end() || std::find(httpVersions.begin(), httpVersions.end(), version) == httpVersions.end()) { 
-                std::cout << "Received invalid HTTP packet" << "\n";
+                std::cout << "Received invalid HTTP packet" << std::endl;
                 return;
             }
 
             // valid package
-            std::cout << method + " " + path + " " + version << "\n"; // to del
+            std::cout << method + " " + path + " " + version << std::endl; // to del
 
             std::unordered_map<std::string, std::string> params;
             std::vector<std::string> splittedPath = splitString(path.c_str(), '?');
@@ -151,7 +154,7 @@ class Server{
             for (int i = 1; i<lines.size(); i++){
                 if(lines[i].size() < 2) break;
                 if(lines[i].find(":") == std::string::npos || splitString(lines[i].c_str(), ':').size() < 2){
-                    std::cout << "Received invalid header: "+lines[i] << "\n";
+                    std::cout << "Received invalid header: "+lines[i] << std::endl;
                     return {};
                 }
                 int separatorIndex = lines[i].find(":");
