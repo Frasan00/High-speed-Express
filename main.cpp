@@ -5,6 +5,7 @@
 
 void handler(Request* req, Response* res){
     std::cout << "Hello!" << "";
+    res->setStatus(200).send(123);
 }
 
 int main(){

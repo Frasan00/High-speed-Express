@@ -82,7 +82,7 @@ class Server{
                 memset(buffer, 0, bufferSize);
 
                 ssize_t bytesRead = recv(clientSocket, buffer, bufferSize - 1, 0);
-                if (bytesRead == -1) {std::cerr << "Failed to read data from client." << std::endl; } 
+                if (bytesRead == -1) { std::cerr << "Failed to read data from client." << std::endl; } 
                 else if (bytesRead == 0) { std::cout << "Client disconnected. Socket: " << clientSocket << std::endl; } 
                 else {
                     // Data received successfully
@@ -143,9 +143,17 @@ class Server{
 
             std::unordered_map<std::string, std::string> headers = this->getHeaders(lines);
 
-            // to del
-            this->printMap(headers);
-            this->printMap(params);
+            std::cout << "DKSDSKDJKSDNJSDKSDJIOUHJSKMLIJDSKNMLDSJM" << std::endl;
+            // path handler
+            for (auto handler = handlers.begin(); handler != handlers.end(); handler++){
+                if(handler->first == path){
+                    Request* req = new Request(path, method, headers, params);
+                    Response* res = new Response(serverSocket);
+                    handler->second(req, res); // executes the handler function
+                    delete req;
+                    delete res;
+                }
+            }
 
         }
 

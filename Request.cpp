@@ -1,8 +1,25 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
+#include <iostream>
+#include <string>
+#include <unordered_map>
+
 class Request{
 
+    public:
+        std::string path;
+        std::string method;
+        std::unordered_map<std::string, std::string> headers;
+        std::unordered_map<std::string, std::string> params;
+        // body to do
+
+        Request(std::string path, std::string method,  std::unordered_map<std::string, std::string> headers,  std::unordered_map<std::string, std::string> params){
+            this->path = path;
+            this->method = method;
+            this->headers = headers;
+            this->params = params;
+        }
 };
 
 #endif
