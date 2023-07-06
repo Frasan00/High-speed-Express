@@ -11,10 +11,10 @@
 class Response {
 public:
     int status;
-    int serverSocket;
+    int clientSocket;
 
-    Response(int serverSocket) {
-        this->serverSocket = serverSocket;
+    Response(int clientSocket) {
+        this->clientSocket = clientSocket;
         this->status = 200;
     }
 
@@ -27,49 +27,6 @@ public:
         sendResponse(response);
     }
 
-    void send(char* response) {
-        sendResponse(response);
-    }
-
-    void send(int response) {
-        std::string strResponse = std::to_string(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<std::string, std::string> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<std::string, int> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<int, std::string> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<std::string, bool> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<bool, std::string> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<int, bool> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
-
-    void send(std::unordered_map<bool, int> response) {
-        std::string strResponse = formatMapResponse(response);
-        sendResponse(strResponse);
-    }
 
 private:
     void sendResponse(const std::string& response) {
@@ -79,16 +36,7 @@ private:
         httpResponse += "\r\n";
         httpResponse += response;
 
-        write(serverSocket, httpResponse.c_str(), httpResponse.length());
-    }
-
-    template<typename MapType>
-    std::string formatMapResponse(const MapType& response) {
-        std::string strResponse;
-        for (const auto& pair : response) {
-            strResponse += pair.first + ": " + std::to_string(pair.second) + "\n";
-        }
-        return strResponse;
+        write(clientSocket, httpResponse.c_str(), httpResponse.length());
     }
 };
 

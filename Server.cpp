@@ -91,8 +91,8 @@ class Server{
                 }
                 
                 // Close the client socket
-                close(clientSocket);
-                std::cout << "Client disconnected, socket: " << clientSocket << std::endl;
+                /*close(clientSocket);
+                std::cout << "Client disconnected, socket: " << clientSocket << std::endl;*/
             }
         }
 
@@ -143,12 +143,12 @@ class Server{
 
             std::unordered_map<std::string, std::string> headers = this->getHeaders(lines);
 
-            std::cout << "DKSDSKDJKSDNJSDKSDJIOUHJSKMLIJDSKNMLDSJM" << std::endl;
             // path handler
             for (auto handler = handlers.begin(); handler != handlers.end(); handler++){
                 if(handler->first == path){
+                    std::cout << path << std::endl;
                     Request* req = new Request(path, method, headers, params);
-                    Response* res = new Response(serverSocket);
+                    Response* res = new Response(clientSocket);
                     handler->second(req, res); // executes the handler function
                     delete req;
                     delete res;
