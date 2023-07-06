@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 #include <unordered_map>
 #include <functional>
+#include <cstring>
 #include "Request.cpp"
 #include "Response.cpp"
 
@@ -143,11 +144,14 @@ class Server{
 
             std::unordered_map<std::string, std::string> headers = this->getHeaders(lines);
 
+            char* body = this->getBody(lines);
+            std::cout << body << std::endl;
+
             // path handler
             for (auto handler = handlers.begin(); handler != handlers.end(); handler++){
                 if(handler->first == path){
                     std::cout << path << std::endl;
-                    Request* req = new Request(path, method, headers, params);
+                    Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
                     handler->second(req, res); // executes the handler function
                     delete req;
@@ -155,6 +159,35 @@ class Server{
                 }
             }
 
+        }
+
+        char* getBody(std::vector<std::string> lines){
+            int bodyPos = -1;
+            for (int i = 0; i < lines.size(); i++){
+                if (lines[i] == "\r" ) {
+                    bodyPos = i;
+                    break;
+                }
+            }
+
+            if(bodyPos == -1) {
+                return "";
+            }
+
+            size_t totalLength = 0;
+            for (int i = bodyPos + 1; i < lines.size(); i++) {
+                totalLength += lines[i].length() + 1;
+            }
+
+            char* body = new char[totalLength];
+
+            char* currentPos = body;
+            for (int i = bodyPos + 1; i < lines.size(); i++) {
+                std::strcpy(currentPos, lines[i].c_str());
+                currentPos += lines[i].length() + 1;
+            }
+
+            return body;
         }
 
         std::unordered_map<std::string, std::string> getHeaders(std::vector<std::string> lines){
