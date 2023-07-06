@@ -145,7 +145,6 @@ class Server{
             std::unordered_map<std::string, std::string> headers = this->getHeaders(lines);
 
             char* body = this->getBody(lines);
-            std::cout << body << std::endl;
 
             // path handler
             for (auto handler = handlers.begin(); handler != handlers.end(); handler++){
@@ -156,13 +155,22 @@ class Server{
                     handler->second(req, res); // executes the handler function
                     delete req;
                     delete res;
+                    return;
                 }
             }
-
+            // no handler provided
+            std::string response = "Can't handle "+path;
+            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            httpResponse += "Content-Type: text/plain\r\n";
+            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += response;
+            write(clientSocket, httpResponse.c_str(), httpResponse.length());
         }
 
         char* getBody(std::vector<std::string> lines){
             int bodyPos = -1;
+            char* noBody;
             for (int i = 0; i < lines.size(); i++){
                 if (lines[i] == "\r" ) {
                     bodyPos = i;
@@ -171,7 +179,7 @@ class Server{
             }
 
             if(bodyPos == -1) {
-                return "";
+                return noBody;
             }
 
             size_t totalLength = 0;
@@ -215,9 +223,9 @@ class Server{
             
             char* token = strtok(copy, &delimiter);
             
-            while (token != nullptr){
+            while (token != NULL){
                 tokens.push_back(token);
-                token = strtok(nullptr, &delimiter);
+                token = strtok(NULL, &delimiter);
             }
             delete[] copy;
             
