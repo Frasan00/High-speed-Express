@@ -97,18 +97,46 @@ class Server{
             }
         }
 
-        void addHandler(std::string path, FunctionType handler){
-            if (handlers.count(path) > 0) {
+        void use(std::string path, FunctionType handler){
+            if (useHandlers.count(path) > 0) {
                 return;
             }
-            handlers[path] = handler;
+            useHandlers[path] = handler;
+        }
+
+        void get(std::string path, FunctionType handler){
+            if (getHandlers.count(path) > 0) {
+                return;
+            }
+            getHandlers[path] = handler;
+        }
+
+        void post(std::string path, FunctionType handler){
+            if (postHandlers.count(path) > 0) {
+                return;
+            }
+            postHandlers[path] = handler;
+        }
+
+        void patch(std::string path, FunctionType handler){
+            if (patchHandlers.count(path) > 0) {
+                return;
+            }
+            patchHandlers[path] = handler;
+        }
+
+        void del(std::string path, FunctionType handler){
+            if (deleteHandlers.count(path) > 0) {
+                return;
+            }
+            deleteHandlers[path] = handler;
         }
     
     private:
         int serverSocket, clientSocket, port, max_connections;
         struct sockaddr_in serverAddress, clientAddress;
         socklen_t clientAddressLength;
-        std::unordered_map<std::string, FunctionType> handlers;
+        std::unordered_map<std::string, FunctionType> useHandlers, getHandlers, postHandlers, patchHandlers, deleteHandlers;
 
         void handleData(int serverSocket, int clientSocket, char* buffer){
             std::vector<std::string> lines = this->splitString(buffer, '\n');
@@ -147,25 +175,30 @@ class Server{
             char* body = this->getBody(lines);
 
             // path handler
-            for (auto handler = handlers.begin(); handler != handlers.end(); handler++){
-                if(handler->first == path){
-                    std::cout << path << std::endl;
-                    Request* req = new Request(path, method, headers, params, body);
-                    Response* res = new Response(clientSocket);
-                    handler->second(req, res); // executes the handler function
-                    delete req;
-                    delete res;
-                    return;
-                }
+            if(method == "GET"){ 
+                this->handleGetRequest(path, method, headers, params, body); 
+                return;
+            } 
+
+            else if(method == "POST"){ 
+                this->handlePostRequest(path, method, headers, params, body);
+                return; 
             }
-            // no handler provided
-            std::string response = "Can't handle "+path;
-            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
-            httpResponse += "Content-Type: text/plain\r\n";
-            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
-            httpResponse += "\r\n";
-            httpResponse += response;
-            write(clientSocket, httpResponse.c_str(), httpResponse.length());
+
+            else if(method == "PATCH"){ 
+                this->handlePatchRequest(path, method, headers, params, body); 
+                return;
+            }
+
+            else if(method == "DELETE"){ 
+                this->handleDeleteRequest(path, method, headers, params, body); 
+                return;
+            }
+
+            else { 
+                this->handleUseRequest(path, method, headers, params, body);
+                return;
+            }
         }
 
         char* getBody(std::vector<std::string> lines){
@@ -279,6 +312,121 @@ class Server{
             }
 
             return 0;
+        }
+
+        void handleGetRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+            for (auto handler = getHandlers.begin(); handler != getHandlers.end(); handler++){
+                if(handler->first == path){
+                    std::cout << path << std::endl;
+                    Request* req = new Request(path, method, headers, params, body);
+                    Response* res = new Response(clientSocket);
+                    handler->second(req, res); // executes the handler function
+                    delete req;
+                    delete res;
+                    return;
+                }
+            }
+
+            std::string response = "Can't GET "+path;
+            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            httpResponse += "Content-Type: text/plain\r\n";
+            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += response;
+            write(clientSocket, httpResponse.c_str(), httpResponse.length());
+            return;
+        }
+
+        void handlePostRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+            for (auto handler = postHandlers.begin(); handler != postHandlers.end(); handler++){
+                if(handler->first == path){
+                    std::cout << path << std::endl;
+                    Request* req = new Request(path, method, headers, params, body);
+                    Response* res = new Response(clientSocket);
+                    handler->second(req, res); // executes the handler function
+                    delete req;
+                    delete res;
+                    return;
+                }
+            }
+
+            std::string response = "Can't post "+path;
+            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            httpResponse += "Content-Type: text/plain\r\n";
+            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += response;
+            write(clientSocket, httpResponse.c_str(), httpResponse.length());
+            return;
+        }
+
+        void handlePatchRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+            for (auto handler = patchHandlers.begin(); handler != patchHandlers.end(); handler++){
+                if(handler->first == path){
+                    std::cout << path << std::endl;
+                    Request* req = new Request(path, method, headers, params, body);
+                    Response* res = new Response(clientSocket);
+                    handler->second(req, res); // executes the handler function
+                    delete req;
+                    delete res;
+                    return;
+                }
+            }
+
+            std::string response = "Can't GET "+path;
+            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            httpResponse += "Content-Type: text/plain\r\n";
+            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += response;
+            write(clientSocket, httpResponse.c_str(), httpResponse.length());
+            return;
+        }
+
+        void handleDeleteRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+            for (auto handler = deleteHandlers.begin(); handler != deleteHandlers.end(); handler++){
+                if(handler->first == path){
+                    std::cout << path << std::endl;
+                    Request* req = new Request(path, method, headers, params, body);
+                    Response* res = new Response(clientSocket);
+                    handler->second(req, res); // executes the handler function
+                    delete req;
+                    delete res;
+                    return;
+                }
+            }
+
+            std::string response = "Can't GET "+path;
+            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            httpResponse += "Content-Type: text/plain\r\n";
+            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += response;
+            write(clientSocket, httpResponse.c_str(), httpResponse.length());
+            return;
+        }
+
+        void handleUseRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+            for (auto handler = useHandlers.begin(); handler != useHandlers.end(); handler++){
+                if(handler->first == path){
+                    std::cout << path << std::endl;
+                    Request* req = new Request(path, method, headers, params, body);
+                    Response* res = new Response(clientSocket);
+                    handler->second(req, res); // executes the handler function
+                    delete req;
+                    delete res;
+                    return;
+                }
+            }
+
+            std::string response = "Can't GET "+path;
+            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            httpResponse += "Content-Type: text/plain\r\n";
+            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "\r\n";
+            httpResponse += response;
+            write(clientSocket, httpResponse.c_str(), httpResponse.length());
+            return;
         }
 
 };

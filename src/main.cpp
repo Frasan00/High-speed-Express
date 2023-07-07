@@ -10,7 +10,7 @@ void handler(Request* req, Response* res){
 
 int main(){
     Server* server = new Server(5000, 10);
-    server->addHandler("/", handler);
+    server->get("/", handler);
     server->start();
 
     delete server;
