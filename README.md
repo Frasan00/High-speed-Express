@@ -9,3 +9,8 @@
 - This project creates a simple TCP server on the desired port
 - Then it listens for clients and creates a socket for each one that connects
 - The server servers the clients based on the configured endpoint and handlers provided
+
+### Limitations
+
+- For now this projects has several limitations, like buffer check to control when a an http message is entirely sent
+- It also only supports hashmap bodies
