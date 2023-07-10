@@ -13,14 +13,14 @@ class Request{
         std::string method;
         std::unordered_map<std::string, std::string> headers;
         std::unordered_map<std::string, std::string> params;
-        std::unordered_map<std::string, std::string> body;
+        std::unordered_map<std::string, std::string>  body;
 
-        Request(std::string path, std::string method,  std::unordered_map<std::string, std::string> headers,  std::unordered_map<std::string, std::string> params, char* body){
+        Request(std::string path, std::string method,  std::unordered_map<std::string, std::string> headers,  std::unordered_map<std::string, std::string> params, std::string body){
             this->path = path;
             this->method = method;
             this->headers = headers;
             this->params = params;
-    
+            this->body = extractBody(body);;
         }
 
 
@@ -43,30 +43,54 @@ class Request{
         }
 
         std::string getBodyParam(std::string bodyParamName) {
-            for (const auto& bodyParam : body) {
-                if (bodyParam.first == bodyParamName) {
-                    return bodyParam.second;
+            for (const auto bodyParam : this->body){
+                std::string key = bodyParam.first;
+                std::string value = bodyParam.second;
+                key.erase(std::remove(key.begin(), key.end(), '\"'), key.end());
+                value.erase(std::remove(value.begin(), value.end(), '\"'), value.end());
+                value.erase(std::remove(value.begin(), value.end(), '\r'), value.end());
+                value.erase(std::remove(value.begin(), value.end(), '\n'), value.end());
+
+                if(key == bodyParamName){
+                    std::string out =value;
+                    return out;
                 }
             }
             return "";
         }
 
     private:
-        std::vector<std::string> splitString(const char* str, char delimiter){
-            std::vector<std::string> tokens;
+        std::unordered_map<std::string, std::string> extractBody(const std::string& body) {
+            std::unordered_map<std::string, std::string> hashMap;
+            std::string trimmedBody = body.substr(1, body.length() - 2);
 
-            char* copy = new char[strlen(str) + 1];
-            strcpy(copy, str);
+            size_t startPos = 0;
+            size_t endPos = trimmedBody.find(',');
             
-            char* token = strtok(copy, &delimiter);
-            
-            while (token != NULL){
-                tokens.push_back(token);
-                token = strtok(NULL, &delimiter);
+            while (endPos != std::string::npos) {
+                std::string pair = trimmedBody.substr(startPos, endPos - startPos);
+
+                size_t colonPos = pair.find(':');
+                if (colonPos != std::string::npos) {
+                    std::string key = pair.substr(1, colonPos - 2);
+                    std::string value = pair.substr(colonPos + 2, pair.length() - colonPos - 3);
+
+                    hashMap[key] = value;
+                }
+
+                startPos = endPos + 1;
+                endPos = trimmedBody.find(',', startPos);
             }
-            delete[] copy;
-            
-            return tokens;
+            std::string lastPair = trimmedBody.substr(startPos);
+            size_t lastColonPos = lastPair.find(':');
+            if (lastColonPos != std::string::npos) {
+                std::string key = lastPair.substr(1, lastColonPos - 2);
+                std::string value = lastPair.substr(lastColonPos + 2, lastPair.length() - lastColonPos - 3);
+
+                hashMap[key] = value;
+            }
+
+            return hashMap;
         }
         
 };

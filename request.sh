@@ -1,7 +1,7 @@
 #!/bin/bash
 
-curl -X GET \
+curl -X POST \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer eyjsdkljasjdlkasjfòklasfj" \
-     -d '{"param1": "value1", "param2": "value2", "param3": "value3", "param4": "value4"}' \
-     "http://localhost:5000/?query1=value1&query2=value2"
+     -d '{"name": "Giggi", "age": "23", "email": "giggi@gmail.com"}' \
+     "http://localhost:5000/user?query1=value1&query2=value2"

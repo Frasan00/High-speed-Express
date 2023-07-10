@@ -9,19 +9,24 @@ class User{
         int id;
         std::string name;
         std::string email;
-        int age;
+        std::string age;
 };
 
 // simple db
 std::vector<User> db = {};
 
 void getAllUsers(Request* req, Response* res) {
+    if(db.size() == 0) {
+        res->setStatus(404).send("There are no users in the database");
+        return;
+    }
+
     std::string response;
     for (const auto& user : db) {
         response += "ID: " + std::to_string(user.id) + "\n";
         response += "Name: " + user.name + "\n";
         response += "Email: " + user.email + "\n";
-        response += "Age: " + std::to_string(user.age) + "\n";
+        response += "Age: " + user.age + "\n";
         response += "\n";
     }
 
@@ -33,36 +38,30 @@ void getUser(Request* req, Response* res) {
         res->setStatus(404).send("There are no users in the database");
         return;
     }
-
     int userId = std::stoi(req->getQueryParam("id"));
 
-    std::string response;
-    for (const auto& user : db) {
+    std::string response = "";
+    for (const User& user : db) {
         if (user.id == userId) {
             response += "ID: " + std::to_string(user.id) + "\n";
             response += "Name: " + user.name + "\n";
             response += "Email: " + user.email + "\n";
-            response += "Age: " + std::to_string(user.age) + "\n";
+            response += "Age: " + user.age + "\n";
             response += "\n";
             break;
         }
     }
-    if(response.empty()) res->setStatus(404).send("User not found");
-    else res->setStatus(404).send("User not found");
+    if(response == "") return res->setStatus(404).send("User not found");
+    else res->setStatus(404).send(response);
 }
 
 void createUser(Request* req, Response* res) {
-    if(db.size() == 0) {
-        res->setStatus(404).send("There are no users in the database");
-        return;
-    }
-
     std::string name = req->getBodyParam("name");
-    std::string email = req->getBodyParam("email");
-    int age = std::stoi(req->getBodyParam("age"));
+    std::string email = req->getBodyParam("email"); 
+    std::string age = req->getBodyParam("age");
 
     User newUser;
-    newUser.id = db[db.size() - 1].id + 1;
+    newUser.id = db.size() > 0 ? db[db.size() - 1].id + 1 : 1;
     newUser.name = name;
     newUser.email = email;
     newUser.age = age;
@@ -100,7 +99,7 @@ int main(){
 
 
     server->get("/users", getAllUsers);
-    server->get("/user", getAllUsers);
+    server->get("/user", getUser);
     server->post("/user", createUser);
     server->del("/user", deleteUser);
     server->start();

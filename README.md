@@ -13,4 +13,9 @@
 ### Limitations
 
 - For now this projects has several limitations, like buffer check to control when a an http message is entirely sent
-- It also only supports hashmap bodies
+- As soon as something is been written on the socket the server processes it
+- It also only supports hashmap bodies passed on a single line
+
+### User restApi
+
+- This project integrates a simple example of a user restApi with some CRUD methods
