@@ -11,7 +11,6 @@
 class Response {
 public:
     int status;
-    int clientSocket;
 
     Response(int clientSocket) {
         this->clientSocket = clientSocket;
@@ -29,6 +28,7 @@ public:
 
 
 private:
+    int clientSocket;
     void sendResponse(const std::string& response) {
         std::string errorMessage = this->getErrorMessage(this->status);
         std::string httpResponse = "HTTP/1.1 " + std::to_string(status) + +" "+errorMessage+"\r\n";

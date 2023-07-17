@@ -97,46 +97,88 @@ class Server{
             }
         }
 
+        // simple handlers
         void use(std::string path, FunctionType handler){
             if (useHandlers.count(path) > 0) {
                 return;
             }
-            useHandlers[path] = handler;
+            useHandlers[path].push_back(handler);
         }
 
         void get(std::string path, FunctionType handler){
             if (getHandlers.count(path) > 0) {
                 return;
             }
-            getHandlers[path] = handler;
+            getHandlers[path].push_back(handler);
         }
 
         void post(std::string path, FunctionType handler){
             if (postHandlers.count(path) > 0) {
                 return;
             }
-            postHandlers[path] = handler;
+            postHandlers[path].push_back(handler);
         }
 
         void patch(std::string path, FunctionType handler){
             if (patchHandlers.count(path) > 0) {
                 return;
             }
-            patchHandlers[path] = handler;
+            patchHandlers[path].push_back(handler);
         }
 
         void del(std::string path, FunctionType handler){
             if (deleteHandlers.count(path) > 0) {
                 return;
             }
-            deleteHandlers[path] = handler;
+            deleteHandlers[path].push_back(handler);
+        }
+
+        // handlers with middlewares
+        void use(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+            if (useHandlers.count(path) > 0) {
+                return;
+            }
+            for(const auto& middleware : middlewares) useHandlers[path].push_back(middleware);
+            useHandlers[path].push_back(handler);
+        }
+
+        void get(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+            if (getHandlers.count(path) > 0) {
+                return;
+            }
+            for(const auto& middleware : middlewares) getHandlers[path].push_back(middleware);
+            getHandlers[path].push_back(handler);
+        }
+
+        void post(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+            if (postHandlers.count(path) > 0) {
+                return;
+            }
+            for(const auto& middleware : middlewares) postHandlers[path].push_back(middleware);
+            postHandlers[path].push_back(handler);
+        }
+
+        void patch(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+            if (patchHandlers.count(path) > 0) {
+                return;
+            }
+            for(const auto& middleware : middlewares) patchHandlers[path].push_back(middleware);
+            patchHandlers[path].push_back(handler);
+        }
+
+        void del(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+            if (deleteHandlers.count(path) > 0) {
+                return;
+            }
+            for(const auto& middleware : middlewares) deleteHandlers[path].push_back(middleware);
+            deleteHandlers[path].push_back(handler);
         }
     
     private:
         int serverSocket, clientSocket, port, max_connections;
         struct sockaddr_in serverAddress, clientAddress;
         socklen_t clientAddressLength;
-        std::unordered_map<std::string, FunctionType> useHandlers, getHandlers, postHandlers, patchHandlers, deleteHandlers;
+        std::unordered_map<std::string, std::vector<FunctionType>> useHandlers, getHandlers, postHandlers, patchHandlers, deleteHandlers;
 
         void handleData(int serverSocket, int clientSocket, char* buffer){
             std::vector<std::string> lines = this->splitString(buffer, '\n');
@@ -320,7 +362,9 @@ class Server{
                     std::cout << path << std::endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
-                    handler->second(req, res); // executes the handler function
+                    for(const auto func : handler->second){
+                        func(req, res);
+                    }
                     delete req;
                     delete res;
                     return;
@@ -343,7 +387,9 @@ class Server{
                     std::cout << path << std::endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
-                    handler->second(req, res); // executes the handler function
+                    for(const auto func : handler->second){
+                        func(req, res);
+                    }
                     delete req;
                     delete res;
                     return;
@@ -366,7 +412,9 @@ class Server{
                     std::cout << path << std::endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
-                    handler->second(req, res); // executes the handler function
+                    for(const auto func : handler->second){
+                        func(req, res);
+                    }
                     delete req;
                     delete res;
                     return;
@@ -389,7 +437,9 @@ class Server{
                     std::cout << path << std::endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
-                    handler->second(req, res); // executes the handler function
+                    for(const auto func : handler->second){
+                        func(req, res);
+                    }
                     delete req;
                     delete res;
                     return;
@@ -412,7 +462,9 @@ class Server{
                     std::cout << path << std::endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
-                    handler->second(req, res); // executes the handler function
+                    for(const auto func : handler->second){
+                        func(req, res);
+                    }
                     delete req;
                     delete res;
                     return;

@@ -15,6 +15,11 @@ class User{
 // simple db
 std::vector<User> db = {};
 
+void middlewareExample(Request* req, Response* res){
+    if(req->body.empty() == true) res->setStatus(400).send("No body provided in the request");
+    return;
+}
+
 void getAllUsers(Request* req, Response* res) {
     if(db.size() == 0) {
         res->setStatus(404).send("There are no users in the database");
@@ -91,16 +96,15 @@ void deleteUser(Request* req, Response* res) {
     }
 }
 
+/* Simple User REST api implementation*/
 int main(){
-    /* Simple User REST api */
 
     // server creation (port, max connections)
     Server* server = new Server(5000, 10);
 
-
     server->get("/users", getAllUsers);
     server->get("/user", getUser);
-    server->post("/user", createUser);
+    server->post("/user", { middlewareExample }, createUser);
     server->del("/user", deleteUser);
     server->start();
 
