@@ -2,6 +2,7 @@
 #include "Server.cpp"
 #include "Request.cpp"
 #include "Response.cpp"
+#include "Router.cpp"
 
 // User Class
 class User{
@@ -96,19 +97,33 @@ void deleteUser(Request* req, Response* res) {
     }
 }
 
+void exampleRoute(Request* req, Response* res) {
+    res->setStatus(200).send("Route example");
+}
+
 /* Simple User REST api implementation*/
 int main(){
 
     // server creation (port, max connections)
     Server* server = new Server(5000, 10);
 
+    // basic routes
     server->get("/users", getAllUsers);
     server->get("/user", getUser);
     server->post("/user", { middlewareExample }, createUser);
     server->del("/user", deleteUser);
+
+    // Router example
+    Router* userRoute = new Router();
+    userRoute->get("/example", exampleRoute);
+
+    server->route("/userRoute", *userRoute);
+
+
     server->start();
 
     delete server;
+    delete userRoute;
 
     return 0;
 }

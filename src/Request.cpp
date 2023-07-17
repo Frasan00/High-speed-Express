@@ -5,17 +5,20 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
+
+using namespace std;
 
 class Request{
 
     public:
-        std::string path;
-        std::string method;
-        std::unordered_map<std::string, std::string> headers;
-        std::unordered_map<std::string, std::string> params;
-        std::unordered_map<std::string, std::string>  body;
+        string path;
+        string method;
+        unordered_map<string, string> headers;
+        unordered_map<string, string> params;
+        unordered_map<string, string>  body;
 
-        Request(std::string path, std::string method,  std::unordered_map<std::string, std::string> headers,  std::unordered_map<std::string, std::string> params, std::string body){
+        Request(string path, string method,  unordered_map<string, string> headers,  unordered_map<string, string> params, string body){
             this->path = path;
             this->method = method;
             this->headers = headers;
@@ -24,7 +27,7 @@ class Request{
         }
 
 
-        std::string getHeader(std::string headerName){
+        string getHeader(string headerName){
             for (const auto header : this->headers){
                 if(header.first == headerName){
                     return header.second;
@@ -33,7 +36,7 @@ class Request{
             return "";
         }
 
-        std::string getQueryParam(std::string queryParamName){
+        string getQueryParam(string queryParamName){
             for (const auto queryParam : this->params){
                 if(queryParam.first == queryParamName){
                     return queryParam.second;
@@ -42,17 +45,17 @@ class Request{
             return "";         
         }
 
-        std::string getBodyParam(std::string bodyParamName) {
+        string getBodyParam(string bodyParamName) {
             for (const auto bodyParam : this->body){
-                std::string key = bodyParam.first;
-                std::string value = bodyParam.second;
-                key.erase(std::remove(key.begin(), key.end(), '\"'), key.end());
-                value.erase(std::remove(value.begin(), value.end(), '\"'), value.end());
-                value.erase(std::remove(value.begin(), value.end(), '\r'), value.end());
-                value.erase(std::remove(value.begin(), value.end(), '\n'), value.end());
+                string key = bodyParam.first;
+                string value = bodyParam.second;
+                key.erase(remove(key.begin(), key.end(), '\"'), key.end());
+                value.erase(remove(value.begin(), value.end(), '\"'), value.end());
+                value.erase(remove(value.begin(), value.end(), '\r'), value.end());
+                value.erase(remove(value.begin(), value.end(), '\n'), value.end());
 
                 if(key == bodyParamName){
-                    std::string out =value;
+                    string out =value;
                     return out;
                 }
             }
@@ -60,20 +63,20 @@ class Request{
         }
 
     private:
-        std::unordered_map<std::string, std::string> extractBody(const std::string& body) {
-            std::unordered_map<std::string, std::string> hashMap;
-            std::string trimmedBody = body.substr(1, body.length() - 2);
+        unordered_map<string, string> extractBody(const string& body) {
+            unordered_map<string, string> hashMap;
+            string trimmedBody = body.substr(1, body.length() - 2);
 
             size_t startPos = 0;
             size_t endPos = trimmedBody.find(',');
             
-            while (endPos != std::string::npos) {
-                std::string pair = trimmedBody.substr(startPos, endPos - startPos);
+            while (endPos != string::npos) {
+                string pair = trimmedBody.substr(startPos, endPos - startPos);
 
                 size_t colonPos = pair.find(':');
-                if (colonPos != std::string::npos) {
-                    std::string key = pair.substr(1, colonPos - 2);
-                    std::string value = pair.substr(colonPos + 2, pair.length() - colonPos - 3);
+                if (colonPos != string::npos) {
+                    string key = pair.substr(1, colonPos - 2);
+                    string value = pair.substr(colonPos + 2, pair.length() - colonPos - 3);
 
                     hashMap[key] = value;
                 }
@@ -81,11 +84,11 @@ class Request{
                 startPos = endPos + 1;
                 endPos = trimmedBody.find(',', startPos);
             }
-            std::string lastPair = trimmedBody.substr(startPos);
+            string lastPair = trimmedBody.substr(startPos);
             size_t lastColonPos = lastPair.find(':');
-            if (lastColonPos != std::string::npos) {
-                std::string key = lastPair.substr(1, lastColonPos - 2);
-                std::string value = lastPair.substr(lastColonPos + 2, lastPair.length() - lastColonPos - 3);
+            if (lastColonPos != string::npos) {
+                string key = lastPair.substr(1, lastColonPos - 2);
+                string value = lastPair.substr(lastColonPos + 2, lastPair.length() - lastColonPos - 3);
 
                 hashMap[key] = value;
             }

@@ -10,12 +10,11 @@
 - Then it listens for clients and creates a socket for each one that connects
 - The server servers the clients based on the configured endpoint and handlers provided
 - The Server accepts middlewares in his handlers
-- TO DO: ROUTING
+- You can use Routing in an express-like way
 
 ### Limitations
 
 - For now this projects has several limitations, like buffer check to control when a an http message is entirely sent
-- As soon as something is been written on the socket the server processes it
 - It also only supports hashmap bodies
 
 ### User restApi

@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+using namespace std;
+
 
 class Response {
 public:
@@ -22,26 +24,26 @@ public:
         return *this;
     }
 
-    void send(std::string response) {
+    void send(string response) {
         sendResponse(response);
     }
 
 
 private:
     int clientSocket;
-    void sendResponse(const std::string& response) {
-        std::string errorMessage = this->getErrorMessage(this->status);
-        std::string httpResponse = "HTTP/1.1 " + std::to_string(status) + +" "+errorMessage+"\r\n";
+    void sendResponse(const string& response) {
+        string errorMessage = this->getErrorMessage(this->status);
+        string httpResponse = "HTTP/1.1 " + to_string(status) + +" "+errorMessage+"\r\n";
         httpResponse += "Content-Type: text/plain\r\n";
-        httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+        httpResponse += "Content-Length: " + to_string(response.length()) + "\r\n";
         httpResponse += "\r\n";
         httpResponse += response;
 
         write(clientSocket, httpResponse.c_str(), httpResponse.length());
     }
 
-    std::string getErrorMessage(int status){
-        std::string errorMessage = "";
+    string getErrorMessage(int status){
+        string errorMessage = "";
         switch (status)
         {
             case 200:

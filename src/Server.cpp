@@ -17,14 +17,17 @@
 #include <cstring>
 #include "Request.cpp"
 #include "Response.cpp"
+#include "Router.cpp"
+
+using namespace std;
 
 /*
 * Main process for a server socket: creation, binding to (ip, port), listen, connection
 */
 
-std::vector<std::string> httpMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" };
-std::vector<std::string> httpVersions = { "HTTP/1.0", "HTTP/1.1", "HTTP/2.0" };
-typedef std::function<void(Request* req, Response* res)> FunctionType;
+vector<string> httpMethods = { "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT" };
+vector<string> httpVersions = { "HTTP/1.0", "HTTP/1.1", "HTTP/2.0" };
+typedef function<void(Request* req, Response* res)> FunctionType;
 
 class Server{
     public:
@@ -37,10 +40,10 @@ class Server{
             // server socket creation
             serverSocket = socket(AF_INET, SOCK_STREAM, 0);
             if(serverSocket == -1) {
-                std::cerr << "Failed to create server socket." << std::endl;
+                cerr << "Failed to create server socket." << endl;
                 return;
             }
-            std::cout << "Socket created succesfully" << std::endl;
+            cout << "Socket created succesfully" << endl;
             int opt=1;
             socklen_t optlen=sizeof(opt);
 
@@ -51,14 +54,14 @@ class Server{
             setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, optlen);
             int bindSocket = bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
             if(bindSocket == -1){
-                std::cerr << "Failed to bind the socket" << std::endl;
+                cerr << "Failed to bind the socket" << endl;
                 close(serverSocket);
                 return;
             }
 
             int listenSocket = listen(serverSocket, max_connections);
             if(listenSocket == -1){
-                std::cerr << "Failed to listen for incoming connections" << std::endl;
+                cerr << "Failed to listen for incoming connections" << endl;
                 close(serverSocket);
                 return;
             }
@@ -69,13 +72,13 @@ class Server{
                 clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddress, &clientAddressLength);
 
                 if (clientSocket == -1) {
-                    std::cerr << "Failed to accept connection." << std::endl;
+                    cerr << "Failed to accept connection." << endl;
                     close(serverSocket);
                     return;
                 }
 
                 // client connected
-                std::cout << "Client connected, socket: "+clientSocket << std::endl;
+                cout << "Client connected, socket: "+clientSocket << endl;
 
                 // handle incoming message
                 const int bufferSize = 1024;
@@ -83,50 +86,90 @@ class Server{
                 memset(buffer, 0, bufferSize);
 
                 ssize_t bytesRead = recv(clientSocket, buffer, bufferSize - 1, 0);
-                if (bytesRead == -1) { std::cerr << "Failed to read data from client." << std::endl; } 
-                else if (bytesRead == 0) { std::cout << "Client disconnected. Socket: " << clientSocket << std::endl; } 
+                if (bytesRead == -1) { cerr << "Failed to read data from client." << endl; } 
+                else if (bytesRead == 0) { cout << "Client disconnected. Socket: " << clientSocket << endl; } 
                 else {
                     // Data received successfully
-                    std::cout << "Data received from socket: "+clientSocket << std::endl;
+                    cout << "Data received from socket: "+clientSocket << endl;
                     this->handleData(serverSocket, clientSocket, buffer);
                 }
                 
                 // Close the client socket
                 /*close(clientSocket);
-                std::cout << "Client disconnected, socket: " << clientSocket << std::endl;*/
+                cout << "Client disconnected, socket: " << clientSocket << endl;*/
+            }
+        }
+
+        void route(string path, Router router) {
+            const vector<unordered_map<string, vector<FunctionType>>>& routes = router.getRouteInfo();
+            
+            for (int i = 0; i < routes.size(); i++) {
+                const unordered_map<string, vector<FunctionType>>& route = routes[i];
+                
+                for (const auto& entry : route) {
+                    const string& routeKey = path+entry.first;
+                    const vector<FunctionType>& routeHandlers = entry.second;
+
+                    switch (i) {
+                        case 0:
+                            if (getHandlers.count(routeKey) > 0) { break; }
+                            getHandlers[routeKey] = routeHandlers;
+                            break;
+
+                        case 1:
+                            if (postHandlers.count(routeKey) > 0) { break; }
+                            postHandlers[routeKey] = routeHandlers;
+                            break;
+
+                        case 2:
+                            if (patchHandlers.count(routeKey) > 0) { break; }
+                            patchHandlers[routeKey] = routeHandlers;
+                            break;
+
+                        case 3:
+                            if (deleteHandlers.count(routeKey) > 0) { break; }
+                            deleteHandlers[routeKey] = routeHandlers;
+                            break;
+
+                        default:
+                            if (useHandlers.count(routeKey) > 0) { break; }
+                            useHandlers[routeKey] = routeHandlers;
+                            break;
+                    }
+                }
             }
         }
 
         // simple handlers
-        void use(std::string path, FunctionType handler){
+        void use(string path, FunctionType handler){
             if (useHandlers.count(path) > 0) {
                 return;
             }
             useHandlers[path].push_back(handler);
         }
 
-        void get(std::string path, FunctionType handler){
+        void get(string path, FunctionType handler){
             if (getHandlers.count(path) > 0) {
                 return;
             }
             getHandlers[path].push_back(handler);
         }
 
-        void post(std::string path, FunctionType handler){
+        void post(string path, FunctionType handler){
             if (postHandlers.count(path) > 0) {
                 return;
             }
             postHandlers[path].push_back(handler);
         }
 
-        void patch(std::string path, FunctionType handler){
+        void patch(string path, FunctionType handler){
             if (patchHandlers.count(path) > 0) {
                 return;
             }
             patchHandlers[path].push_back(handler);
         }
 
-        void del(std::string path, FunctionType handler){
+        void del(string path, FunctionType handler){
             if (deleteHandlers.count(path) > 0) {
                 return;
             }
@@ -134,7 +177,7 @@ class Server{
         }
 
         // handlers with middlewares
-        void use(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+        void use(string path, vector<FunctionType> middlewares, FunctionType handler){
             if (useHandlers.count(path) > 0) {
                 return;
             }
@@ -142,7 +185,7 @@ class Server{
             useHandlers[path].push_back(handler);
         }
 
-        void get(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+        void get(string path, vector<FunctionType> middlewares, FunctionType handler){
             if (getHandlers.count(path) > 0) {
                 return;
             }
@@ -150,7 +193,7 @@ class Server{
             getHandlers[path].push_back(handler);
         }
 
-        void post(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+        void post(string path, vector<FunctionType> middlewares, FunctionType handler){
             if (postHandlers.count(path) > 0) {
                 return;
             }
@@ -158,7 +201,7 @@ class Server{
             postHandlers[path].push_back(handler);
         }
 
-        void patch(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+        void patch(string path, vector<FunctionType> middlewares, FunctionType handler){
             if (patchHandlers.count(path) > 0) {
                 return;
             }
@@ -166,7 +209,7 @@ class Server{
             patchHandlers[path].push_back(handler);
         }
 
-        void del(std::string path, std::vector<FunctionType> middlewares, FunctionType handler){
+        void del(string path, vector<FunctionType> middlewares, FunctionType handler){
             if (deleteHandlers.count(path) > 0) {
                 return;
             }
@@ -178,72 +221,72 @@ class Server{
         int serverSocket, clientSocket, port, max_connections;
         struct sockaddr_in serverAddress, clientAddress;
         socklen_t clientAddressLength;
-        std::unordered_map<std::string, std::vector<FunctionType>> useHandlers, getHandlers, postHandlers, patchHandlers, deleteHandlers;
+        unordered_map<string, vector<FunctionType>> useHandlers, getHandlers, postHandlers, patchHandlers, deleteHandlers;
 
         void handleData(int serverSocket, int clientSocket, char* buffer){
-            std::vector<std::string> lines = this->splitString(buffer, '\n');
-            std::string firstLine = lines[0];
-            std::vector<std::string> splittedFirstLine = this->splitString(firstLine.c_str(), ' ');
+            vector<string> lines = splitString(buffer, '\n');
+            string firstLine = lines[0];
+            vector<string> splittedFirstLine = splitString(firstLine.c_str(), ' ');
 
             // First packet check
             if (strlen(buffer) == 0 || lines.size() < 1 || splittedFirstLine.size() < 2) { 
-                std::cout << "Received invalid HTTP packet" << std::endl;
+                cout << "Received invalid HTTP packet" << endl;
                 return;
             }
 
-            std::string method = splittedFirstLine[0];
-            std::string path = splittedFirstLine[1];
-            std::string version = splittedFirstLine[2];
+            string method = splittedFirstLine[0];
+            string path = splittedFirstLine[1];
+            string version = splittedFirstLine[2];
             version.pop_back();
 
             // second packet check
-            if (std::find(httpMethods.begin(), httpMethods.end(), method) == httpMethods.end() || std::find(httpVersions.begin(), httpVersions.end(), version) == httpVersions.end()) { 
-                std::cout << "Received invalid HTTP packet" << std::endl;
+            if (find(httpMethods.begin(), httpMethods.end(), method) == httpMethods.end() || find(httpVersions.begin(), httpVersions.end(), version) == httpVersions.end()) { 
+                cout << "Received invalid HTTP packet" << endl;
                 return;
             }
 
             // valid package
-            std::cout << method + " " + path + " " + version << std::endl; // to del
+            cout << method + " " + path + " " + version << endl; // to del
 
-            std::unordered_map<std::string, std::string> params;
-            std::vector<std::string> splittedPath = splitString(path.c_str(), '?');
+            unordered_map<string, string> params;
+            vector<string> splittedPath = splitString(path.c_str(), '?');
             if(splittedPath.size() == 2){
                 path = splittedPath[0];
                 params = parseQueryString(splittedPath[1]);
             }
 
-            std::unordered_map<std::string, std::string> headers = this->getHeaders(lines);
+            unordered_map<string, string> headers = getHeaders(lines);
 
-            char* body = this->getBody(lines);
+            char* body = getBody(lines);
 
             // path handler
             if(method == "GET"){ 
-                this->handleGetRequest(path, method, headers, params, body); 
+                handleGetRequest(path, method, headers, params, body); 
                 return;
             } 
 
             else if(method == "POST"){ 
-                this->handlePostRequest(path, method, headers, params, body);
+                handlePostRequest(path, method, headers, params, body);
                 return; 
             }
 
             else if(method == "PATCH"){ 
-                this->handlePatchRequest(path, method, headers, params, body); 
+                handlePatchRequest(path, method, headers, params, body); 
                 return;
             }
 
             else if(method == "DELETE"){ 
-                this->handleDeleteRequest(path, method, headers, params, body); 
+                handleDeleteRequest(path, method, headers, params, body); 
                 return;
             }
 
             else { 
-                this->handleUseRequest(path, method, headers, params, body);
+                handleUseRequest(path, method, headers, params, body);
                 return;
             }
         }
 
-        char* getBody(std::vector<std::string> lines){
+        char* getBody(vector<string> lines){
             int bodyPos = -1;
             char* noBody;
             for (int i = 0; i < lines.size(); i++){
@@ -266,32 +309,32 @@ class Server{
 
             char* currentPos = body;
             for (int i = bodyPos + 1; i < lines.size(); i++) {
-                std::strcpy(currentPos, lines[i].c_str());
+                strcpy(currentPos, lines[i].c_str());
                 currentPos += lines[i].length() + 1;
             }
 
             return body;
         }
 
-        std::unordered_map<std::string, std::string> getHeaders(std::vector<std::string> lines){
-            std::unordered_map<std::string, std::string> headers;
+        unordered_map<string, string> getHeaders(vector<string> lines){
+            unordered_map<string, string> headers;
             for (int i = 1; i<lines.size(); i++){
                 if(lines[i].size() < 2) break;
-                if(lines[i].find(":") == std::string::npos || splitString(lines[i].c_str(), ':').size() < 2){
-                    std::cout << "Received invalid header: "+lines[i] << std::endl;
+                if(lines[i].find(":") == string::npos || splitString(lines[i].c_str(), ':').size() < 2){
+                    cout << "Received invalid header: "+lines[i] << endl;
                     return {};
                 }
                 int separatorIndex = lines[i].find(":");
-                std::string key = lines[i].substr(0, separatorIndex);
-                std::string value = lines[i].substr(separatorIndex + 1);
+                string key = lines[i].substr(0, separatorIndex);
+                string value = lines[i].substr(separatorIndex + 1);
                 value.pop_back(); // deletes the final "\r"
                 headers[key] = trimStart(value);
             }
             return headers;
         }
 
-        std::vector<std::string> splitString(const char* str, char delimiter){
-            std::vector<std::string> tokens;
+        vector<string> splitString(const char* str, char delimiter){
+            vector<string> tokens;
 
             char* copy = new char[strlen(str) + 1];
             strcpy(copy, str);
@@ -307,19 +350,19 @@ class Server{
             return tokens;
         }
 
-        std::unordered_map<std::string, std::string> parseQueryString(const std::string& queryString) {
-            std::unordered_map<std::string, std::string> params;
+        unordered_map<string, string> parseQueryString(const string& queryString) {
+            unordered_map<string, string> params;
 
             size_t startPos = 0;
             size_t endPos = queryString.find('&');
 
-            while (endPos != std::string::npos) {
-                std::string param = queryString.substr(startPos, endPos - startPos);
+            while (endPos != string::npos) {
+                string param = queryString.substr(startPos, endPos - startPos);
 
                 size_t delimiterPos = param.find('=');
-                if (delimiterPos != std::string::npos) {
-                    std::string key = param.substr(0, delimiterPos);
-                    std::string value = param.substr(delimiterPos + 1);
+                if (delimiterPos != string::npos) {
+                    string key = param.substr(0, delimiterPos);
+                    string value = param.substr(delimiterPos + 1);
                     params[key] = value;
                 }
 
@@ -327,39 +370,30 @@ class Server{
                 endPos = queryString.find('&', startPos);
             }
 
-            std::string lastParam = queryString.substr(startPos);
+            string lastParam = queryString.substr(startPos);
             size_t delimiterPos = lastParam.find('=');
-            if (delimiterPos != std::string::npos) {
-                std::string key = lastParam.substr(0, delimiterPos);
-                std::string value = lastParam.substr(delimiterPos + 1);
+            if (delimiterPos != string::npos) {
+                string key = lastParam.substr(0, delimiterPos);
+                string value = lastParam.substr(delimiterPos + 1);
                 params[key] = value;
             }
 
             return params;
         }
 
-        std::string trimStart(const std::string& str) {
-            std::string trimmed = str;
+        string trimStart(const string& str) {
+            string trimmed = str;
             size_t startPos = 0;
-            while (startPos < trimmed.length() && std::isspace(trimmed[startPos])) {
+            while (startPos < trimmed.length() && isspace(trimmed[startPos])) {
                 ++startPos;
             }
             return trimmed.substr(startPos);
         }
 
-        // testing purpose
-        int printMap(std::unordered_map<std::string, std::string> map) {
-            for (const auto& pair : map) {
-                std::cout << pair.first << ": " << pair.second << std::endl;
-            }
-
-            return 0;
-        }
-
-        void handleGetRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+        void handleGetRequest(string path, string method, unordered_map<string, string> headers, unordered_map<string, string> params, char* body){
             for (auto handler = getHandlers.begin(); handler != getHandlers.end(); handler++){
                 if(handler->first == path){
-                    std::cout << path << std::endl;
+                    cout << path << endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
                     for(const auto func : handler->second){
@@ -371,20 +405,20 @@ class Server{
                 }
             }
 
-            std::string response = "Can't GET "+path;
-            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            string response = "Can't GET "+path;
+            string httpResponse = "HTTP/1.1 " + to_string(400) +"\r\n";
             httpResponse += "Content-Type: text/plain\r\n";
-            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "Content-Length: " + to_string(response.length()) + "\r\n";
             httpResponse += "\r\n";
             httpResponse += response;
             write(clientSocket, httpResponse.c_str(), httpResponse.length());
             return;
         }
 
-        void handlePostRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+        void handlePostRequest(string path, string method, unordered_map<string, string> headers, unordered_map<string, string> params, char* body){
             for (auto handler = postHandlers.begin(); handler != postHandlers.end(); handler++){
                 if(handler->first == path){
-                    std::cout << path << std::endl;
+                    cout << path << endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
                     for(const auto func : handler->second){
@@ -396,20 +430,20 @@ class Server{
                 }
             }
 
-            std::string response = "Can't post "+path;
-            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            string response = "Can't post "+path;
+            string httpResponse = "HTTP/1.1 " + to_string(400) +"\r\n";
             httpResponse += "Content-Type: text/plain\r\n";
-            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "Content-Length: " + to_string(response.length()) + "\r\n";
             httpResponse += "\r\n";
             httpResponse += response;
             write(clientSocket, httpResponse.c_str(), httpResponse.length());
             return;
         }
 
-        void handlePatchRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+        void handlePatchRequest(string path, string method, unordered_map<string, string> headers, unordered_map<string, string> params, char* body){
             for (auto handler = patchHandlers.begin(); handler != patchHandlers.end(); handler++){
                 if(handler->first == path){
-                    std::cout << path << std::endl;
+                    cout << path << endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
                     for(const auto func : handler->second){
@@ -421,20 +455,20 @@ class Server{
                 }
             }
 
-            std::string response = "Can't GET "+path;
-            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            string response = "Can't GET "+path;
+            string httpResponse = "HTTP/1.1 " + to_string(400) +"\r\n";
             httpResponse += "Content-Type: text/plain\r\n";
-            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "Content-Length: " + to_string(response.length()) + "\r\n";
             httpResponse += "\r\n";
             httpResponse += response;
             write(clientSocket, httpResponse.c_str(), httpResponse.length());
             return;
         }
 
-        void handleDeleteRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+        void handleDeleteRequest(string path, string method, unordered_map<string, string> headers, unordered_map<string, string> params, char* body){
             for (auto handler = deleteHandlers.begin(); handler != deleteHandlers.end(); handler++){
                 if(handler->first == path){
-                    std::cout << path << std::endl;
+                    cout << path << endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
                     for(const auto func : handler->second){
@@ -446,20 +480,20 @@ class Server{
                 }
             }
 
-            std::string response = "Can't GET "+path;
-            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            string response = "Can't GET "+path;
+            string httpResponse = "HTTP/1.1 " + to_string(400) +"\r\n";
             httpResponse += "Content-Type: text/plain\r\n";
-            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "Content-Length: " + to_string(response.length()) + "\r\n";
             httpResponse += "\r\n";
             httpResponse += response;
             write(clientSocket, httpResponse.c_str(), httpResponse.length());
             return;
         }
 
-        void handleUseRequest(std::string path, std::string method, std::unordered_map<std::string, std::string> headers, std::unordered_map<std::string, std::string> params, char* body){
+        void handleUseRequest(string path, string method, unordered_map<string, string> headers, unordered_map<string, string> params, char* body){
             for (auto handler = useHandlers.begin(); handler != useHandlers.end(); handler++){
                 if(handler->first == path){
-                    std::cout << path << std::endl;
+                    cout << path << endl;
                     Request* req = new Request(path, method, headers, params, body);
                     Response* res = new Response(clientSocket);
                     for(const auto func : handler->second){
@@ -471,10 +505,10 @@ class Server{
                 }
             }
 
-            std::string response = "Can't GET "+path;
-            std::string httpResponse = "HTTP/1.1 " + std::to_string(400) +"\r\n";
+            string response = "Can't GET "+path;
+            string httpResponse = "HTTP/1.1 " + to_string(400) +"\r\n";
             httpResponse += "Content-Type: text/plain\r\n";
-            httpResponse += "Content-Length: " + std::to_string(response.length()) + "\r\n";
+            httpResponse += "Content-Length: " + to_string(response.length()) + "\r\n";
             httpResponse += "\r\n";
             httpResponse += response;
             write(clientSocket, httpResponse.c_str(), httpResponse.length());
